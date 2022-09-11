@@ -60,9 +60,7 @@ jobs:
       -
         name: Test
         run: |
-          docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:test caddy version
-          docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:test caddy build-info
-          docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:test caddy list-modules
+          docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:test doxygen --help
       - 
         name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
