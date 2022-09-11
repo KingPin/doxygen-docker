@@ -23,8 +23,8 @@ jobs:
         name: Docker Setup QEMU
         uses: docker/setup-qemu-action@v2
         id: qemu
-        with:
-          platforms: amd64,arm64
+#        with:
+#          platforms: amd64,arm64
       - 
         name: Docker Setup Buildx
         id: buildx
@@ -81,7 +81,7 @@ jobs:
         name: Build and push Docker image
         uses: docker/build-push-action@v3
         with:
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
