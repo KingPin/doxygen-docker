@@ -16,10 +16,6 @@ jobs:
 
     steps:
       - 
-        name: Repo Name
-        id: repo-name
-        run: echo "::set-output name=value::$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')"
-      - 
         name: Docker Setup QEMU
         uses: docker/setup-qemu-action@v2
         id: qemu
@@ -54,19 +50,19 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           load: true
-          tags: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:test
+          tags: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
       -
         name: Test
         run: |
-          docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:test doxygen --help
+          docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:test doxygen --help
       - 
         name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: image
-          image-ref: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:test
+          image-ref: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:test
           format: 'template'
           template: '@/contrib/sarif.tpl'
           output: 'trivy-results.sarif'
@@ -86,6 +82,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           tags: |
-            ghcr.io/kingpin/${{ steps.repo-name.outputs.value }}:latest
-            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.repo-name.outputs.value }}:latest
-            quay.io/kingpinx1/${{ steps.repo-name.outputs.value }}:latest
+            ghcr.io/kingpin/${{ github.event.repository.name }}:latest
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest
+            quay.io/kingpinx1/${{ github.event.repository.name }}:latest
