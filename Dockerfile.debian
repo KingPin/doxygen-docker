@@ -1,0 +1,6 @@
+FROM debian:stable-slim
+
+# echo 'deb http://deb.debian.org/debian bookworm-backports main contrib non-free' > /etc/apt/sources.list.d/bullseye-backports.list  && \
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y doxygen graphviz git && \
+    rm -rf /var/lib/apt/lists/*
