@@ -49,7 +49,7 @@ jobs:
         name: Build and test docker image
         uses: docker/build-push-action@v5
         with:
-          context: .
+          # context: .
           file: ./Dockerfile.debian
           load: true
           tags: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:debian-test
@@ -83,7 +83,7 @@ jobs:
         name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: .
+          # context: .
           file: ./Dockerfile.debian
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
