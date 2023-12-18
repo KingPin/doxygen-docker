@@ -49,6 +49,8 @@ jobs:
         name: Build and test docker image
         uses: docker/build-push-action@v5
         with:
+          context: .
+          file: ./Dockerfile.debian
           load: true
           tags: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:debian-test
           cache-from: type=gha
