@@ -70,7 +70,7 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: image
-          image-ref: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:test
+          image-ref: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:debian-test
           format: 'template'
           template: '@/contrib/sarif.tpl'
           output: 'trivy-results-debian.sarif'
