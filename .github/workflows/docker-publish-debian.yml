@@ -63,7 +63,7 @@ jobs:
         name: Retrieve doxygen version
         run: |
           echo "doxygen_version=$(docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:debian-test doxygen -V)" >> $GITHUB_OUTPUT
-          id: version
+        id: version
           # ${{ steps.version.outputs.doxygen_version }}
       - 
         name: Run Trivy vulnerability scanner
