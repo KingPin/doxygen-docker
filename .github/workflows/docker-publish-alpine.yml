@@ -1,4 +1,4 @@
-name: Docker Image CI
+name: Docker Image CI alpine
 
 on:
   schedule:
@@ -49,20 +49,28 @@ jobs:
         name: Build and test docker image
         uses: docker/build-push-action@v5
         with:
+          # context: .
+          file: ./Dockerfile.alpine
           load: true
-          tags: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:test
+          tags: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:alpine-test
           cache-from: type=gha
           cache-to: type=gha,mode=max
       -
         name: Test
         run: |
-          docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:test doxygen --help
+          docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:alpine-test doxygen --help
+      -
+        name: Retrieve doxygen version
+        run: |
+          echo "doxygen_version=$(docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:alpine-test doxygen -v)" >> $GITHUB_OUTPUT
+        id: version
+          # ${{ steps.version.outputs.doxygen_version }}
       - 
         name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: image
-          image-ref: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:test
+          image-ref: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:alpine-test
           format: 'template'
           template: '@/contrib/sarif.tpl'
           output: 'trivy-results-alpine.sarif'
@@ -77,6 +85,8 @@ jobs:
         name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
+          # context: .
+          file: ./Dockerfile.alpine
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
           cache-from: type=gha
@@ -84,7 +94,10 @@ jobs:
           tags: |
             ghcr.io/kingpin/${{ github.event.repository.name }}:latest
             ghcr.io/kingpin/${{ github.event.repository.name }}:alpine
+            ghcr.io/kingpin/${{ github.event.repository.name }}:alpine-${{ steps.version.outputs.doxygen_version }}
             docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest
             docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:alpine
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:alpine-${{ steps.version.outputs.doxygen_version }}
             quay.io/kingpinx1/${{ github.event.repository.name }}:latest
             quay.io/kingpinx1/${{ github.event.repository.name }}:alpine
+            quay.io/kingpinx1/${{ github.event.repository.name }}:alpine-${{ steps.version.outputs.doxygen_version }}
