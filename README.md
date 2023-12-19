@@ -15,9 +15,9 @@ available OS's :
 Available tags :
 
  - **latest**
-	 - uses alpine as the base container along with latest available doxygen at time oif build
+	 - uses alpine as the base container along with latest available doxygen at time of build
  - **alpine**
-	 - uses alpine as the base container along with latest available doxygen at time oif build
+	 - uses alpine as the base container along with latest available doxygen at time of build
  - **alpine-x.x.x**
 	 - uses alpine as the base container along with a specific version of doxygen (usually latest packaged at time of build)
 	 - e.g.
@@ -26,7 +26,7 @@ Available tags :
 			 - https://hub.docker.com/r/kingpin/doxygen-docker/tags
 			 - https://github.com/KingPin/doxygen-docker/pkgs/container/doxygen-docker
  - **debian**
-	 - uses debian as the base container along with latest available doxygen at time oif build
+	 - uses debian as the base container along with latest available doxygen at time of build
  - **debian-x.x.x**
 	 - uses debian as the base container along with a specific version of doxygen (usually latest packaged at time of build)
 	 - e.g.
