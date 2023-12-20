@@ -1,4 +1,4 @@
-name: Docker Image CI alpine
+name: Docker Image CI
 
 on:
   schedule:
