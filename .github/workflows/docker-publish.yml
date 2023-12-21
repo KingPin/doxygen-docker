@@ -71,8 +71,7 @@ jobs:
         with:
           scan-type: image
           image-ref: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:alpine-test
-          format: 'template'
-          template: '@/contrib/sarif.tpl'
+          format: 'sarif'
           output: 'trivy-results-alpine.sarif'
           severity: 'MEDIUM,CRITICAL,HIGH'
           hide-progress: false
