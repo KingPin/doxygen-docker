@@ -1,8 +1,33 @@
 FROM debian:stable-slim
 
-# echo 'deb http://deb.debian.org/debian bookworm-backports main contrib non-free' > /etc/apt/sources.list.d/bullseye-backports.list  && \
-RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y doxygen graphviz git && \
-    rm -rf /var/lib/apt/lists/*
+LABEL org.opencontainers.image.title="Doxygen Docker Image"
+LABEL org.opencontainers.image.description="Doxygen container based on Debian Linux"
+LABEL org.opencontainers.image.source="https://github.com/kingpin/doxygen-docker"
 
+# Install required packages
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    doxygen \
+    graphviz \
+    git \
+    ca-certificates \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN groupadd -g 1000 doxygen && \
+    useradd -u 1000 -g doxygen -s /bin/bash -m doxygen
+
+# Set up working directory
+WORKDIR /Doxygen
+RUN mkdir -p /Doxygen && chown -R doxygen:doxygen /Doxygen
+
+# Switch to non-root user
+USER doxygen
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD doxygen -v || exit 1
+
+# Set entry point
 CMD ["doxygen", "/Doxygen"]

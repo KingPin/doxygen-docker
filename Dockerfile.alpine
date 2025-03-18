@@ -1,5 +1,30 @@
-FROM alpine:latest
+FROM alpine:3.19
 
-RUN apk --update --no-cache add doxygen graphviz git
+LABEL org.opencontainers.image.title="Doxygen Docker Image"
+LABEL org.opencontainers.image.description="Lightweight Doxygen container based on Alpine Linux"
+LABEL org.opencontainers.image.source="https://github.com/kingpin/doxygen-docker"
 
+# Install required packages
+RUN apk --update --no-cache add \
+    doxygen \
+    graphviz \
+    git \
+    && rm -rf /var/cache/apk/*
+
+# Create non-root user
+RUN addgroup -g 1000 doxygen && \
+    adduser -u 1000 -G doxygen -s /bin/sh -D doxygen
+
+# Set up working directory
+WORKDIR /Doxygen
+RUN mkdir -p /Doxygen && chown -R doxygen:doxygen /Doxygen
+
+# Switch to non-root user
+USER doxygen
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD doxygen -v || exit 1
+
+# Set entry point
 CMD ["doxygen", "/Doxygen"]
