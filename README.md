@@ -9,6 +9,8 @@
 *Ready-to-use containerized Doxygen for documentation generation with multi-architecture support*
 </div>
 
+> **DISCLAIMER**: This is a community-maintained Docker image and is not officially affiliated with, endorsed by, or connected to the Doxygen project. For the official Doxygen software, please visit [doxygen.nl](https://www.doxygen.nl/).
+
 ## 📋 Table of Contents
 - [Quick Start](#-quick-start)
 - [Available Images](#-available-images)
@@ -18,6 +20,7 @@
 - [Integration Examples](#-integration-examples)
 - [Troubleshooting](#-troubleshooting)
 - [Security](#-security)
+- [Support & Issue Reporting](#-support--issue-reporting)
 - [Contributing](#-contributing)
 
 ## 🚀 Quick Start
@@ -208,6 +211,26 @@ Use the PUID/PGID environment variables as described in the [Permission Handling
 - We follow a minimal installation approach to reduce attack surface
 - Alpine-based images are recommended for production use
 - We use non-root users by default
+
+## 🆘 Support & Issue Reporting
+
+Please direct your issues to the appropriate project:
+
+* **Docker Image Issues**: For problems with the container, entrypoint script, permissions, or image building, please [open an issue](https://github.com/kingpin/doxygen-docker/issues/new) in this repository.
+
+* **Doxygen Software Issues**: For problems with Doxygen itself, documentation generation, or Doxygen syntax/features, please refer to the [official Doxygen project](https://www.doxygen.nl/manual/problems.html) or [open an issue](https://github.com/doxygen/doxygen/issues) in the Doxygen repository.
+
+Examples of container-specific issues:
+- Image won't build or pull
+- Container crashes or exits unexpectedly
+- Permission problems with mounted volumes
+- Issues with entrypoint script
+
+Examples of Doxygen-specific issues:
+- Documentation not generating correctly
+- Questions about Doxygen syntax or commands
+- Feature requests for Doxygen itself
+- Output formatting problems
 
 ## 🤝 Contributing
 
