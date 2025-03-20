@@ -7,12 +7,12 @@ on:
   push:
     branches: [main]
     paths:
-      - 'Dockerfile.*'
+      - 'Dockerfile'
       - '.github/workflows/docker-publish.yml'
   pull_request:
     branches: [main]
     paths:
-      - 'Dockerfile.*'
+      - 'Dockerfile'
       - '.github/workflows/docker-publish.yml'
 
 concurrency:
@@ -28,8 +28,10 @@ jobs:
         include:
           - distro: alpine
             is_latest: true
+            distro_version: 'latest'
           - distro: debian
             is_latest: false
+            debian_version: 'stable-slim'
     permissions:
       contents: read
       packages: write
@@ -71,12 +73,22 @@ jobs:
           username: ${{ secrets.QUAY_USERNAME }}
           password: ${{ secrets.QUAY_ROBOT_TOKEN }}
       
+      # Generate Dockerfile hash
+      - name: Generate Dockerfile hash
+        id: hash
+        run: |
+          echo "hash=$(sha256sum Dockerfile | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+      
       # Build test image
       - name: Build test image
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile.${{ matrix.distro }}
+          file: ./Dockerfile
+          build-args: |
+            DISTRO=${{ matrix.distro }}
+            DISTRO_VERSION=${{ matrix.distro_version }}
+            DEBIAN_VERSION=${{ matrix.debian_version }}
           load: true
           tags: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.distro }}-test
           cache-from: |
@@ -85,12 +97,6 @@ jobs:
           cache-to: |
             type=gha,scope=${{ matrix.distro }},mode=max
             ${{ github.ref == 'refs/heads/main' && format('type=registry,ref=ghcr.io/kingpin/{0}:{1}-cache,mode=max', github.event.repository.name, matrix.distro) || '' }}
-      
-      # Add a hash step before build
-      - name: Generate Dockerfile hash
-        id: hash
-        run: |
-          echo "hash=$(sha256sum Dockerfile.${{ matrix.distro }} | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
 
       # Test image
       - name: Test image
