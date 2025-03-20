@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Doxygen Logo](https://www.doxygen.nl/images/doxygen_logo.png)
+![Doxygen Logo](https://www.doxygen.nl/assets/doxygen.svg)
 
 [![Docker Build](https://img.shields.io/github/actions/workflow/status/kingpin/doxygen-docker/docker-publish.yml?branch=main&label=build&logo=github&style=flat-square)](https://github.com/kingpin/doxygen-docker/actions/workflows/docker-publish.yml)
 [![Docker Pulls](https://img.shields.io/docker/pulls/kingpin/doxygen-docker?color=blue&logo=docker&style=flat-square)](https://hub.docker.com/r/kingpin/doxygen-docker)
