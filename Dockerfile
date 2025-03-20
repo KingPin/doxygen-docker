@@ -57,4 +57,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD doxygen -v || exit 1
 
 # Set entry point
-CMD ["doxygen", "/Doxyfile"]
+CMD ["doxygen", "/Doxygen"]
