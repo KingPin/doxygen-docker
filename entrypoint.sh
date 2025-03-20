@@ -1,9 +1,9 @@
 #!/bin/sh
 set -e
 
-# Function to output info messages
+# Function to output info messages - always to stderr
 info() {
-  echo "[INFO] $@"
+  echo "[INFO] $@" >&2
 }
 
 # Function to output warning messages
@@ -29,6 +29,12 @@ fix_permissions() {
     fi
   fi
 }
+
+# Check for version command (run silently)
+if [ "$1" = "doxygen" ] && [ "$2" = "-v" ]; then
+  exec doxygen -v
+  exit 0
+fi
 
 # Check for custom user/group IDs
 if [ -n "$PUID" ] && [ -n "$PGID" ]; then
@@ -62,12 +68,18 @@ fix_permissions /input
 fix_permissions /output
 
 # Check if the command is doxygen and Doxyfile not readable
-if [ "$1" = "doxygen" ] && [ -n "$2" ] && [ ! -r "$2" ]; then
+if [ "$1" = "doxygen" ] && [ -n "$2" ] && [ "$2" != "-v" ] && [ "$2" != "--help" ] && [ ! -r "$2" ]; then
   warn "Doxyfile at $2 is not readable, this may cause issues"
 fi
 
+# Special handling for help command
+if [ "$1" = "doxygen" ] && [ "$2" = "--help" ]; then
+  exec doxygen --help
+  exit 0
+fi
+
 # Check if running custom command or default
-if [ "$#" -eq 0 ]; then
+if [ "$#" -eq 0; then
   # No arguments provided, run default command
   info "Running default command: doxygen /Doxyfile"
   exec doxygen /Doxyfile
