@@ -4,23 +4,24 @@ LABEL org.opencontainers.image.title="Doxygen Docker Image"
 LABEL org.opencontainers.image.description="Doxygen container based on Debian Linux"
 LABEL org.opencontainers.image.source="https://github.com/kingpin/doxygen-docker"
 
-# Install required packages
-RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-    doxygen \
-    graphviz \
-    git \
-    ca-certificates \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create non-root user
+# Create non-root user first (rarely changes)
 RUN groupadd -g 1000 doxygen && \
     useradd -u 1000 -g doxygen -s /bin/bash -m doxygen
 
-# Set up working directories
+# Set up working directories (rarely changes)
 RUN mkdir -p /input /output && \
     chown -R doxygen:doxygen /input /output
+
+# Install required packages (may change more frequently)
+# List packages alphabetically for better readability and to avoid duplication
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    ca-certificates \
+    doxygen \
+    git \
+    graphviz \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # Switch to non-root user
 USER doxygen
