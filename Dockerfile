@@ -14,12 +14,14 @@ LABEL org.opencontainers.image.description="Doxygen container for documentation 
 LABEL org.opencontainers.image.source="https://github.com/kingpin/doxygen-docker"
 
 # Create non-root user (using appropriate commands for each distro)
-RUN if [ "$DISTRO" = "alpine" ]; then \
+RUN if [ -f /etc/alpine-release ]; then \
         addgroup -g 1000 doxygen && \
         adduser -u 1000 -G doxygen -s /bin/sh -D doxygen; \
-    else \
+    elif [ -f /etc/debian_version ]; then \
         groupadd -g 1000 doxygen && \
         useradd -u 1000 -g doxygen -s /bin/bash -m doxygen; \
+    else \
+        echo "Unsupported distribution" && exit 1; \
     fi
 
 # Set up working directories (common for both distros)
@@ -27,7 +29,7 @@ RUN mkdir -p /input /output && \
     chown -R doxygen:doxygen /input /output
 
 # Install required packages (distro-specific)
-RUN if [ "$DISTRO" = "alpine" ]; then \
+RUN if [ -f /etc/alpine-release ]; then \
         apk --update --no-cache add \
         doxygen \
         git \
