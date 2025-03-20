@@ -169,7 +169,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile.${{ matrix.distro }}
+          file: ./Dockerfile
           build-args: |
             DISTRO=${{ matrix.distro }}
             ${{ matrix.distro == 'alpine' && format('DISTRO_VERSION={0}', matrix.distro_version) || format('DEBIAN_VERSION={0}', matrix.debian_version) }}
