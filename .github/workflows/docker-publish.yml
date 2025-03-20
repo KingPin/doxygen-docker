@@ -87,8 +87,7 @@ jobs:
           file: ./Dockerfile
           build-args: |
             DISTRO=${{ matrix.distro }}
-            DISTRO_VERSION=${{ matrix.distro_version }}
-            DEBIAN_VERSION=${{ matrix.debian_version }}
+            ${{ matrix.distro == 'alpine' && format('DISTRO_VERSION={0}', matrix.distro_version) || format('DEBIAN_VERSION={0}', matrix.debian_version) }}
           load: true
           tags: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.distro }}-test
           cache-from: |
@@ -171,6 +170,9 @@ jobs:
         with:
           context: .
           file: ./Dockerfile.${{ matrix.distro }}
+          build-args: |
+            DISTRO=${{ matrix.distro }}
+            ${{ matrix.distro == 'alpine' && format('DISTRO_VERSION={0}', matrix.distro_version) || format('DEBIAN_VERSION={0}', matrix.debian_version) }}
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: ${{ github.ref == 'refs/heads/main' || github.event_name == 'pull_request' }}
           tags: ${{ steps.prep.outputs.tags }}

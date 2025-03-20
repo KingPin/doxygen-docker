@@ -2,8 +2,8 @@ ARG DISTRO=alpine
 ARG DISTRO_VERSION=latest
 ARG DEBIAN_VERSION=stable-slim
 
-# Select base image based on the DISTRO argument
-FROM ${DISTRO}:${DISTRO == "alpine" ? DISTRO_VERSION : DEBIAN_VERSION}
+# First set a default image
+FROM ${DISTRO}:${DISTRO_VERSION}
 
 # Common labels
 LABEL org.opencontainers.image.title="Doxygen Docker Image"
