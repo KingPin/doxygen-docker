@@ -5,6 +5,9 @@ ARG DEBIAN_VERSION=stable-slim
 # First set a default image
 FROM ${DISTRO}:${DISTRO_VERSION}
 
+# Re-declare ARG to make it available after FROM
+ARG DISTRO=alpine
+
 # Common labels
 LABEL org.opencontainers.image.title="Doxygen Docker Image"
 LABEL org.opencontainers.image.description="Doxygen container for documentation generation"
