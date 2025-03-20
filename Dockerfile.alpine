@@ -1,4 +1,4 @@
-FROM alpine:3.19
+FROM alpine:latest
 
 LABEL org.opencontainers.image.title="Doxygen Docker Image"
 LABEL org.opencontainers.image.description="Lightweight Doxygen container based on Alpine Linux"
@@ -15,12 +15,15 @@ RUN apk --update --no-cache add \
 RUN addgroup -g 1000 doxygen && \
     adduser -u 1000 -G doxygen -s /bin/sh -D doxygen
 
-# Set up working directory
-WORKDIR /Doxygen
-RUN mkdir -p /Doxygen && chown -R doxygen:doxygen /Doxygen
+# Set up working directories
+RUN mkdir -p /input /output && \
+    chown -R doxygen:doxygen /input /output
 
 # Switch to non-root user
 USER doxygen
+
+# Set working directory
+WORKDIR /input
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \

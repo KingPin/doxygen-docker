@@ -18,12 +18,15 @@ RUN apt-get update && \
 RUN groupadd -g 1000 doxygen && \
     useradd -u 1000 -g doxygen -s /bin/bash -m doxygen
 
-# Set up working directory
-WORKDIR /Doxygen
-RUN mkdir -p /Doxygen && chown -R doxygen:doxygen /Doxygen
+# Set up working directories
+RUN mkdir -p /input /output && \
+    chown -R doxygen:doxygen /input /output
 
 # Switch to non-root user
 USER doxygen
+
+# Set working directory
+WORKDIR /input
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
