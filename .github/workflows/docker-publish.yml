@@ -80,10 +80,18 @@ jobs:
           load: true
           tags: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.distro }}-test
           cache-from: |
-            type=gha,scope=${{ matrix.distro }}
+            type=gha,scope=${{ matrix.distro }}-${{ steps.hash.outputs.hash }}
+            type=registry,ref=ghcr.io/kingpin/${{ github.event.repository.name }}:${{ matrix.distro }}-cache
           cache-to: |
             type=gha,scope=${{ matrix.distro }},mode=max
+            ${{ github.ref == 'refs/heads/main' && format('type=registry,ref=ghcr.io/kingpin/{0}:{1}-cache,mode=max', github.event.repository.name, matrix.distro) || '' }}
       
+      # Add a hash step before build
+      - name: Generate Dockerfile hash
+        id: hash
+        run: |
+          echo "hash=$(sha256sum Dockerfile.${{ matrix.distro }} | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+
       # Test image
       - name: Test image
         run: |
@@ -162,8 +170,11 @@ jobs:
           tags: ${{ steps.prep.outputs.tags }}
           cache-from: |
             type=gha,scope=${{ matrix.distro }}
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.distro }}-test
+            type=registry,ref=ghcr.io/kingpin/${{ github.event.repository.name }}:${{ matrix.distro }}-cache
           cache-to: |
             type=gha,scope=${{ matrix.distro }},mode=max
+            ${{ github.ref == 'refs/heads/main' && format('type=registry,ref=ghcr.io/kingpin/{0}:{1}-cache,mode=max', github.event.repository.name, matrix.distro) || '' }}
           labels: |
             org.opencontainers.image.title=${{ github.event.repository.name }}
             org.opencontainers.image.description=Doxygen container based on ${{ matrix.distro }}
