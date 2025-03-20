@@ -13,6 +13,28 @@ LABEL org.opencontainers.image.title="Doxygen Docker Image"
 LABEL org.opencontainers.image.description="Doxygen container for documentation generation"
 LABEL org.opencontainers.image.source="https://github.com/kingpin/doxygen-docker"
 
+# Install required packages (distro-specific) - including tools for the entrypoint
+RUN if [ -f /etc/alpine-release ]; then \
+        apk --update --no-cache add \
+        doxygen \
+        git \
+        graphviz \
+        bash \
+        su-exec \
+        shadow \
+        && rm -rf /var/cache/apk/*; \
+    else \
+        apt-get update && \
+        DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        ca-certificates \
+        doxygen \
+        git \
+        graphviz \
+        gosu \
+        && apt-get clean \
+        && rm -rf /var/lib/apt/lists/*; \
+    fi
+
 # Create non-root user (using appropriate commands for each distro)
 RUN if [ -f /etc/alpine-release ]; then \
         addgroup -g 1000 doxygen && \
@@ -28,33 +50,20 @@ RUN if [ -f /etc/alpine-release ]; then \
 RUN mkdir -p /input /output && \
     chown -R doxygen:doxygen /input /output
 
-# Install required packages (distro-specific)
-RUN if [ -f /etc/alpine-release ]; then \
-        apk --update --no-cache add \
-        doxygen \
-        git \
-        graphviz \
-        && rm -rf /var/cache/apk/*; \
-    else \
-        apt-get update && \
-        DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        ca-certificates \
-        doxygen \
-        git \
-        graphviz \
-        && apt-get clean \
-        && rm -rf /var/lib/apt/lists/*; \
-    fi
-
-# Switch to non-root user
-USER doxygen
+# Copy entrypoint script
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Set working directory
 WORKDIR /input
+
+# Switch to non-root user by default
+USER doxygen
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD doxygen -v || exit 1
 
 # Set entry point
-CMD ["doxygen", "/Doxygen"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["doxygen", "/Doxyfile"]
