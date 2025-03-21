@@ -163,7 +163,6 @@ documentation:
 ### Docker Compose Example
 
 ```yaml
-version: '3'
 services:
   doxygen:
     image: ghcr.io/kingpin/doxygen-docker:latest
