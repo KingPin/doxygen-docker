@@ -4,190 +4,196 @@ on:
   schedule:
     - cron: '31 16 * * 1'
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'Dockerfile'
+      - '.github/workflows/docker-publish.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'Dockerfile'
+      - '.github/workflows/docker-publish.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  Alpine:
-
+  build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        distro: [alpine, debian]
+        include:
+          - distro: alpine
+            is_latest: true
+            distro_version: 'latest'
+          - distro: debian
+            is_latest: false
+            debian_version: 'stable-slim'
     permissions:
-      contents: write
+      contents: read
       packages: write
       security-events: write
-
+      id-token: write # For OIDC auth
+    
     steps:
-      - 
-        name: Docker Setup QEMU
-        uses: docker/setup-qemu-action@v3
-        id: qemu
-        with:
-          platforms: amd64,arm64,arm
-      - 
-        name: Docker Setup Buildx
-        id: buildx
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - 
-        name: Login to DockerHub
-        uses: docker/login-action@v3 
+      
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+      
+      # Login to Docker Hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - 
-        name: Log into ghcr.io registry
+      
+      # Login to GitHub Container Registry
+      - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      -
-        name: Login to Quay.io
+      
+      # Login to Quay.io
+      - name: Login to Quay.io
         uses: docker/login-action@v3
         with:
           registry: quay.io
           username: ${{ secrets.QUAY_USERNAME }}
           password: ${{ secrets.QUAY_ROBOT_TOKEN }}
-      -
-        name: Build and test docker image
+      
+      # Generate Dockerfile hash
+      - name: Generate Dockerfile hash
+        id: hash
+        run: |
+          echo "hash=$(sha256sum Dockerfile | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+      
+      # Build test image
+      - name: Build test image
         uses: docker/build-push-action@v6
         with:
-          # context: .
-          file: ./Dockerfile.alpine
+          context: .
+          file: ./Dockerfile
+          build-args: |
+            DISTRO=${{ matrix.distro }}
+            ${{ matrix.distro == 'alpine' && format('DISTRO_VERSION={0}', matrix.distro_version) || format('DEBIAN_VERSION={0}', matrix.debian_version) }}
           load: true
-          tags: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:alpine-test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-      -
-        name: Test
+          tags: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.distro }}-test
+          cache-from: |
+            type=gha,scope=${{ matrix.distro }}-${{ steps.hash.outputs.hash }}
+            type=registry,ref=ghcr.io/kingpin/${{ github.event.repository.name }}:${{ matrix.distro }}-cache
+          cache-to: |
+            type=gha,scope=${{ matrix.distro }},mode=max
+            ${{ github.ref == 'refs/heads/main' && format('type=registry,ref=ghcr.io/kingpin/{0}:{1}-cache,mode=max', github.event.repository.name, matrix.distro) || '' }}
+
+      # Test image
+      - name: Test image
         run: |
-          docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:alpine-test doxygen --help
-      -
-        name: Retrieve doxygen version
-        run: |
-          echo "doxygen_version=$(docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:alpine-test doxygen -v)" >> $GITHUB_OUTPUT
+          docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.distro }}-test doxygen --help
+      
+      # Get Doxygen version
+      - name: Extract Doxygen version
         id: version
-          # ${{ steps.version.outputs.doxygen_version }}
-      - 
-        name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        run: |
+          # Run with environment variable to silence entrypoint output
+          echo "doxygen_version=$(docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.distro }}-test doxygen -v | tail -n1 | tr -d '\n')" >> $GITHUB_OUTPUT
+          
+          # Verify that we got a clean version
+          if ! [[ $(cat $GITHUB_OUTPUT | grep doxygen_version | cut -d= -f2) =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: Invalid Doxygen version extracted. Check entrypoint script output."
+            cat $GITHUB_OUTPUT
+            exit 1
+          fi
+      
+      # Vulnerability scan
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.30.0
         with:
           scan-type: image
-          image-ref: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:alpine-test
+          image-ref: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.distro }}-test
           format: 'sarif'
-          output: 'trivy-results-alpine.sarif'
+          output: 'trivy-results-${{ matrix.distro }}.sarif'
           severity: 'MEDIUM,CRITICAL,HIGH'
           hide-progress: false
-      - 
-        name: Upload Trivy scan results to GitHub Security tab
+      
+      # Upload scan results
+      - name: Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: 'trivy-results-alpine.sarif'
-      - 
-        name: Build and push Docker image
-        uses: docker/build-push-action@v6
-        with:
-          # context: .
-          file: ./Dockerfile.alpine
-          platforms: linux/amd64,linux/arm64,linux/arm/v7
-          push: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          tags: |
-            ghcr.io/kingpin/${{ github.event.repository.name }}:latest
-            ghcr.io/kingpin/${{ github.event.repository.name }}:alpine
-            ghcr.io/kingpin/${{ github.event.repository.name }}:alpine-${{ steps.version.outputs.doxygen_version }}
-            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest
-            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:alpine
-            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:alpine-${{ steps.version.outputs.doxygen_version }}
-            quay.io/kingpinx1/${{ github.event.repository.name }}:latest
-            quay.io/kingpinx1/${{ github.event.repository.name }}:alpine
-            quay.io/kingpinx1/${{ github.event.repository.name }}:alpine-${{ steps.version.outputs.doxygen_version }}
-  Debian:
-
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: write
-      security-events: write
-
-    steps:
-      - 
-        name: Docker Setup QEMU
-        uses: docker/setup-qemu-action@v3
-        id: qemu
-        with:
-          platforms: amd64,arm64,arm
-      - 
-        name: Docker Setup Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v3
-      - 
-        name: Login to DockerHub
-        uses: docker/login-action@v3 
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - 
-        name: Log into ghcr.io registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      -
-        name: Login to Quay.io
-        uses: docker/login-action@v3
-        with:
-          registry: quay.io
-          username: ${{ secrets.QUAY_USERNAME }}
-          password: ${{ secrets.QUAY_ROBOT_TOKEN }}
-      -
-        name: Build and test docker image
-        uses: docker/build-push-action@v6
-        with:
-          # context: .
-          file: ./Dockerfile.debian
-          load: true
-          tags: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:debian-test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-      -
-        name: Test
+          sarif_file: 'trivy-results-${{ matrix.distro }}.sarif'
+      
+      # Generate tag lists based on context
+      - name: Prepare tags
+        id: prep
         run: |
-          docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:debian-test doxygen --help
-      -
-        name: Retrieve doxygen version
-        run: |
-          echo "doxygen_version=$(docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:debian-test doxygen -v)" >> $GITHUB_OUTPUT
-        id: version
-          # ${{ steps.version.outputs.doxygen_version }}
-      - 
-        name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: image
-          image-ref: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:debian-test
-          format: 'sarif'
-          output: 'trivy-results-debian.sarif'
-          severity: 'MEDIUM,CRITICAL,HIGH'
-          hide-progress: false
-      - 
-        name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: 'trivy-results-debian.sarif'
-      - 
-        name: Build and push Docker image
+          # Generate current timestamp in ISO 8601 format
+          echo "timestamp=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+          
+          # For PR builds, only create GHCR tags with PR number
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            PR_NUMBER=$(echo $GITHUB_REF | awk -F / '{print $3}')
+            TAGS="ghcr.io/kingpin/${{ github.event.repository.name }}:${{ matrix.distro }}-pr-${PR_NUMBER}
+            ghcr.io/kingpin/${{ github.event.repository.name }}:${{ matrix.distro }}-${{ steps.version.outputs.doxygen_version }}-pr-${PR_NUMBER}"
+            
+            if [ "${{ matrix.is_latest }}" = "true" ]; then
+              TAGS="$TAGS
+              ghcr.io/kingpin/${{ github.event.repository.name }}:pr-${PR_NUMBER}"
+            fi
+          else
+            # For main branch, create all registry tags
+            TAGS="ghcr.io/kingpin/${{ github.event.repository.name }}:${{ matrix.distro }}
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.distro }}
+            quay.io/kingpinx1/${{ github.event.repository.name }}:${{ matrix.distro }}
+            ghcr.io/kingpin/${{ github.event.repository.name }}:${{ matrix.distro }}-${{ steps.version.outputs.doxygen_version }}
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.distro }}-${{ steps.version.outputs.doxygen_version }}
+            quay.io/kingpinx1/${{ github.event.repository.name }}:${{ matrix.distro }}-${{ steps.version.outputs.doxygen_version }}"
+            
+            # Add latest tags if this is the latest version
+            if [ "${{ matrix.is_latest }}" = "true" ]; then
+              TAGS="$TAGS
+              ghcr.io/kingpin/${{ github.event.repository.name }}:latest
+              docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest
+              quay.io/kingpinx1/${{ github.event.repository.name }}:latest"
+            fi
+          fi
+          
+          echo "tags<<EOF" >> $GITHUB_OUTPUT
+          echo "$TAGS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      
+      # Build and push the images
+      - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          # context: .
-          file: ./Dockerfile.debian
+          context: .
+          file: ./Dockerfile
+          build-args: |
+            DISTRO=${{ matrix.distro }}
+            ${{ matrix.distro == 'alpine' && format('DISTRO_VERSION={0}', matrix.distro_version) || format('DEBIAN_VERSION={0}', matrix.debian_version) }}
           platforms: linux/amd64,linux/arm64,linux/arm/v7
-          push: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          tags: |
-            ghcr.io/kingpin/${{ github.event.repository.name }}:debian
-            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:debian
-            quay.io/kingpinx1/${{ github.event.repository.name }}:debian
-            ghcr.io/kingpin/${{ github.event.repository.name }}:debian-${{ steps.version.outputs.doxygen_version }}
-            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:debian-${{ steps.version.outputs.doxygen_version }}
-            quay.io/kingpinx1/${{ github.event.repository.name }}:debian-${{ steps.version.outputs.doxygen_version }}
+          push: ${{ github.ref == 'refs/heads/main' || github.event_name == 'pull_request' }}
+          tags: ${{ steps.prep.outputs.tags }}
+          cache-from: |
+            type=gha,scope=${{ matrix.distro }}
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.distro }}-test
+            type=registry,ref=ghcr.io/kingpin/${{ github.event.repository.name }}:${{ matrix.distro }}-cache
+          cache-to: |
+            type=gha,scope=${{ matrix.distro }},mode=max
+            ${{ github.ref == 'refs/heads/main' && format('type=registry,ref=ghcr.io/kingpin/{0}:{1}-cache,mode=max', github.event.repository.name, matrix.distro) || '' }}
+          labels: |
+            org.opencontainers.image.title=${{ github.event.repository.name }}
+            org.opencontainers.image.description=Doxygen container based on ${{ matrix.distro }}
+            org.opencontainers.image.version=${{ steps.version.outputs.doxygen_version }}
+            org.opencontainers.image.created=${{ steps.prep.outputs.timestamp }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
