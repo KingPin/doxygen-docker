@@ -1,0 +1,20 @@
+name: Test ARC Runner
+
+on:
+#  push:
+#    branches:
+#      - main
+  workflow_dispatch:
+
+jobs:
+  test-arc:
+    runs-on: arc-doxygen-runner
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test Step
+        run: |
+          echo "test test all the tests!"
+#          echo "I am running on pod: $HOSTNAME"
