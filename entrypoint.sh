@@ -14,19 +14,13 @@ warn() {
 # Function to fix permissions on a directory
 fix_permissions() {
   local dir=$1
-  if [ -d "$dir" ]; then
-    info "Checking permissions for $dir"
-    if [ ! -w "$dir" ]; then
-      warn "Directory $dir is not writable, attempting to fix permissions"
-      # Try to fix with current user first
-      chmod -R u+rw "$dir" 2>/dev/null || true
-      
-      # If still not writable and we can use sudo, try as root
-      if [ ! -w "$dir" ] && command -v sudo >/dev/null 2>&1; then
-        warn "Using sudo to fix permissions on $dir"
-        sudo chmod -R u+rw "$dir" 2>/dev/null || warn "Still can't fix permissions on $dir"
-      fi
-    fi
+  if [ ! -d "$dir" ]; then
+    warn "Directory $dir does not exist — skipping permission check (doxygen may fail)"
+    return
+  fi
+  if [ ! -w "$dir" ]; then
+    warn "Directory $dir is not writable, attempting to fix permissions"
+    chmod -R u+rw "$dir" || warn "chmod failed on $dir — doxygen may fail to write output"
   fi
 }
 
@@ -37,6 +31,9 @@ fi
 
 # Handle privilege drop (always runs when started as root)
 if [ "$(id -u)" = "0" ]; then
+  if { [ -n "$PUID" ] && [ -z "$PGID" ]; } || { [ -z "$PUID" ] && [ -n "$PGID" ]; }; then
+    warn "Both PUID and PGID must be set for remapping — ignoring partial values (PUID=${PUID:-unset} PGID=${PGID:-unset})"
+  fi
   if [ -n "$PUID" ] && [ -n "$PGID" ]; then
     info "Remapping doxygen UID:GID to $PUID:$PGID"
     if [ -f /etc/alpine-release ]; then
@@ -68,9 +65,10 @@ fi
 fix_permissions /input
 fix_permissions /output
 
-# Check if the command is doxygen and Doxyfile not readable
+# Abort early if the specified config file is not readable — doxygen will always fail
 if [ "$1" = "doxygen" ] && [ -n "$2" ] && [ "$2" != "-v" ] && [ "$2" != "--help" ] && [ ! -r "$2" ]; then
-  warn "Doxyfile at $2 is not readable, this may cause issues"
+  echo "[ERROR] Doxyfile '$2' is not readable. Check that the file exists and the container has read permission." >&2
+  exit 1
 fi
 
 # Special handling for help command
