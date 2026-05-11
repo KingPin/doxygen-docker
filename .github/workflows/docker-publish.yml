@@ -41,7 +41,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
+      - name: Validate entrypoint syntax
+        run: sh -n entrypoint.sh
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       
@@ -52,6 +55,7 @@ jobs:
       
       # Login to Docker Hub
       - name: Login to Docker Hub
+        if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -67,6 +71,7 @@ jobs:
       
       # Login to Quay.io
       - name: Login to Quay.io
+        if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
           registry: quay.io
@@ -129,6 +134,7 @@ jobs:
       
       # Upload scan results
       - name: Upload Trivy scan results
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-results-${{ matrix.distro }}.sarif'
@@ -142,7 +148,11 @@ jobs:
           
           # For PR builds, only create GHCR tags with PR number
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            PR_NUMBER=$(echo $GITHUB_REF | awk -F / '{print $3}')
+            PR_NUMBER=$(echo "$GITHUB_REF" | awk -F / '{print $3}')
+            if [ -z "$PR_NUMBER" ]; then
+              echo "Error: could not extract PR number from GITHUB_REF='$GITHUB_REF'" >&2
+              exit 1
+            fi
             TAGS="ghcr.io/kingpin/${{ github.event.repository.name }}:${{ matrix.distro }}-pr-${PR_NUMBER}
             ghcr.io/kingpin/${{ github.event.repository.name }}:${{ matrix.distro }}-${{ steps.version.outputs.doxygen_version }}-pr-${PR_NUMBER}"
             
@@ -186,7 +196,6 @@ jobs:
           tags: ${{ steps.prep.outputs.tags }}
           cache-from: |
             type=gha,scope=${{ matrix.distro }}
-            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.distro }}-test
             type=registry,ref=ghcr.io/kingpin/${{ github.event.repository.name }}:${{ matrix.distro }}-cache
           cache-to: |
             type=gha,scope=${{ matrix.distro }},mode=max
