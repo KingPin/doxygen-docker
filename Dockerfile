@@ -58,9 +58,6 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 # Set working directory
 WORKDIR /input
 
-# Switch to non-root user by default
-USER doxygen
-
 # Health check
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD doxygen -v || exit 1

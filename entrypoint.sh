@@ -35,30 +35,32 @@ if [ "$1" = "doxygen" ] && [ "$2" = "-v" ]; then
   exec doxygen -v
 fi
 
-# Check for custom user/group IDs
-if [ -n "$PUID" ] && [ -n "$PGID" ]; then
-  info "Running with custom UID:GID - $PUID:$PGID"
-  
-  # Check if we're root (can modify user/group)
-  if [ "$(id -u)" = "0" ]; then
-    # Check if we need to modify the doxygen user/group
+# Handle privilege drop (always runs when started as root)
+if [ "$(id -u)" = "0" ]; then
+  if [ -n "$PUID" ] && [ -n "$PGID" ]; then
+    info "Remapping doxygen UID:GID to $PUID:$PGID"
     if [ -f /etc/alpine-release ]; then
       # Alpine
-      deluser doxygen 2>/dev/null || true
-      delgroup doxygen 2>/dev/null || true
+      deluser doxygen 2>/dev/null && info "Removed existing doxygen user" || true
+      delgroup doxygen 2>/dev/null && info "Removed existing doxygen group" || true
       addgroup -g "$PGID" doxygen
-      adduser -u "$PUID" -G doxygen -s /bin/sh -D doxygen
+      adduser -u "$PUID" -G doxygen -s /bin/sh -D -h /home/doxygen doxygen
     elif [ -f /etc/debian_version ]; then
       # Debian
       groupmod -o -g "$PGID" doxygen
       usermod -o -u "$PUID" doxygen
     fi
-    
-    # Fix home directory ownership
     chown -R doxygen:doxygen /home/doxygen
-    
-    # Drop to the doxygen user for the rest of the script
-    exec su-exec doxygen "$0" "$@" 2>/dev/null || exec gosu doxygen "$0" "$@" 2>/dev/null || exec su -p doxygen -c "$0 $*"
+  fi
+
+  if command -v su-exec >/dev/null 2>&1; then
+    exec su-exec doxygen "$0" "$@"
+  elif command -v gosu >/dev/null 2>&1; then
+    info "su-exec not available, using gosu for privilege drop"
+    exec gosu doxygen "$0" "$@"
+  else
+    warn "Neither su-exec nor gosu found, falling back to su (args with spaces may break)"
+    exec su -p doxygen -c "$0 $*"
   fi
 fi
 
