@@ -33,7 +33,6 @@ fix_permissions() {
 # Check for version command (run silently)
 if [ "$1" = "doxygen" ] && [ "$2" = "-v" ]; then
   exec doxygen -v
-  exit 0
 fi
 
 # Check for custom user/group IDs
@@ -75,7 +74,6 @@ fi
 # Special handling for help command
 if [ "$1" = "doxygen" ] && [ "$2" = "--help" ]; then
   exec doxygen --help
-  exit 0
 fi
 
 # Check if running custom command or default

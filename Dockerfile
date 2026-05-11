@@ -2,8 +2,9 @@ ARG DISTRO=alpine
 ARG DISTRO_VERSION=latest
 ARG DEBIAN_VERSION=stable-slim
 
-# First set a default image
-FROM ${DISTRO}:${DISTRO_VERSION}
+FROM alpine:${DISTRO_VERSION} AS alpine-base
+FROM debian:${DEBIAN_VERSION} AS debian-base
+FROM ${DISTRO}-base
 
 # Re-declare ARG to make it available after FROM
 ARG DISTRO=alpine

@@ -94,7 +94,7 @@ jobs:
             type=gha,scope=${{ matrix.distro }}-${{ steps.hash.outputs.hash }}
             type=registry,ref=ghcr.io/kingpin/${{ github.event.repository.name }}:${{ matrix.distro }}-cache
           cache-to: |
-            type=gha,scope=${{ matrix.distro }},mode=max
+            type=gha,scope=${{ matrix.distro }}-${{ steps.hash.outputs.hash }},mode=max
             ${{ github.ref == 'refs/heads/main' && format('type=registry,ref=ghcr.io/kingpin/{0}:{1}-cache,mode=max', github.event.repository.name, matrix.distro) || '' }}
 
       # Test image
