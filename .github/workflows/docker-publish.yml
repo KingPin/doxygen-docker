@@ -94,7 +94,7 @@ jobs:
             DISTRO=${{ matrix.distro }}
             ${{ matrix.distro == 'alpine' && format('DISTRO_VERSION={0}', matrix.distro_version) || format('DEBIAN_VERSION={0}', matrix.debian_version) }}
           load: true
-          tags: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.distro }}-test
+          tags: doxygen-test:${{ matrix.distro }}
           cache-from: |
             type=gha,scope=${{ matrix.distro }}-${{ steps.hash.outputs.hash }}
             type=registry,ref=ghcr.io/kingpin/${{ github.event.repository.name }}:${{ matrix.distro }}-cache
@@ -105,14 +105,14 @@ jobs:
       # Test image
       - name: Test image
         run: |
-          docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.distro }}-test doxygen --help
+          docker run --rm doxygen-test:${{ matrix.distro }} doxygen --help
       
       # Get Doxygen version
       - name: Extract Doxygen version
         id: version
         run: |
           # Run with environment variable to silence entrypoint output
-          echo "doxygen_version=$(docker run --rm docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.distro }}-test doxygen -v | tail -n1 | tr -d '\n')" >> $GITHUB_OUTPUT
+          echo "doxygen_version=$(docker run --rm doxygen-test:${{ matrix.distro }} doxygen -v | tail -n1 | tr -d '\n')" >> $GITHUB_OUTPUT
           
           # Verify that we got a clean version
           if ! [[ $(cat $GITHUB_OUTPUT | grep doxygen_version | cut -d= -f2) =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -126,7 +126,7 @@ jobs:
         uses: aquasecurity/trivy-action@0.30.0
         with:
           scan-type: image
-          image-ref: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ matrix.distro }}-test
+          image-ref: doxygen-test:${{ matrix.distro }}
           format: 'sarif'
           output: 'trivy-results-${{ matrix.distro }}.sarif'
           severity: 'MEDIUM,CRITICAL,HIGH'
