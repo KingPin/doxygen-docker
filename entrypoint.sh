@@ -77,7 +77,7 @@ if [ "$1" = "doxygen" ] && [ "$2" = "--help" ]; then
 fi
 
 # Check if running custom command or default
-if [ "$#" -eq 0; then
+if [ "$#" -eq 0 ]; then
   # No arguments provided, run default command
   info "Running default command: doxygen /Doxyfile"
   exec doxygen /Doxyfile
