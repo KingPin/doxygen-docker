@@ -76,13 +76,16 @@ if [ "$1" = "doxygen" ] && [ "$2" = "--help" ]; then
   exec doxygen --help
 fi
 
-# Check if running custom command or default
-if [ "$#" -eq 0 ]; then
-  # No arguments provided, run default command
-  info "Running default command: doxygen /Doxyfile"
-  exec doxygen /Doxyfile
-else
-  # Execute the passed command
-  info "Running command: $@"
-  exec "$@"
+# When doxygen is run without a config path, try /Doxyfile first then fall back to /Doxygen
+if [ "$1" = "doxygen" ] && [ "$#" -eq 1 ] || [ "$#" -eq 0 ]; then
+  if [ -f /Doxyfile ]; then
+    exec doxygen /Doxyfile
+  elif [ -f /Doxygen ]; then
+    warn "Mounting config at /Doxygen is deprecated — please rename your mount to /Doxyfile"
+    exec doxygen /Doxygen
+  else
+    exec doxygen /Doxyfile
+  fi
 fi
+
+exec "$@"

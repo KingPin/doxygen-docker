@@ -64,4 +64,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
 
 # Set entry point
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-CMD ["doxygen", "/Doxyfile"]
+CMD ["doxygen"]
