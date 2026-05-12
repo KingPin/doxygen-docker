@@ -110,7 +110,7 @@ docker run --rm \
 ```bash
 docker run --rm \
   -v $(pwd):/input \
-  docker.io/kingpin/doxygen-docker:debian-1.9.4 doxygen Doxyfile
+  docker.io/kingpin/doxygen-docker:debian-1.9.4 doxygen /Doxyfile
 ```
 
 ## 📁 Volume Mounting Guide
@@ -136,7 +136,7 @@ docker run --rm \
   ghcr.io/kingpin/doxygen-docker:latest
 ```
 
-This matches the container's user with your host user ID, ensuring proper file permissions.
+This remaps the container's internal `doxygen` user to your host UID/GID, so output files are owned by you. Both `PUID` and `PGID` must be set together — setting only one is ignored.
 
 ### Common Permission Issues
 
@@ -154,7 +154,7 @@ If you encounter permission errors, try:
 documentation:
   image: ghcr.io/kingpin/doxygen-docker:latest
   script:
-    - doxygen Doxyfile
+    - doxygen /Doxyfile
   artifacts:
     paths:
       - docs/html
@@ -181,7 +181,7 @@ services:
 - name: Generate Documentation
   uses: docker://ghcr.io/kingpin/doxygen-docker:latest
   with:
-    args: doxygen Doxyfile
+    args: doxygen /Doxyfile
   env:
     PUID: 1000
     PGID: 1000
