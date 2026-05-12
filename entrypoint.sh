@@ -3,17 +3,17 @@ set -e
 
 # Function to output info messages - always to stderr
 info() {
-  echo "[INFO] $@" >&2
+  echo "[INFO] $*" >&2
 }
 
 # Function to output warning messages
 warn() {
-  echo "[WARN] $@" >&2
+  echo "[WARN] $*" >&2
 }
 
 # Function to fix permissions on a directory
 fix_permissions() {
-  local dir=$1
+  dir="$1"
   if [ ! -d "$dir" ]; then
     warn "Directory $dir does not exist — skipping permission check (doxygen may fail)"
     return
@@ -44,8 +44,8 @@ if [ "$(id -u)" = "0" ]; then
     info "Remapping doxygen UID:GID to $PUID:$PGID"
     if [ -f /etc/alpine-release ]; then
       # Alpine
-      deluser doxygen 2>/dev/null && info "Removed existing doxygen user" || true
-      delgroup doxygen 2>/dev/null && info "Removed existing doxygen group" || true
+      if deluser doxygen 2>/dev/null; then info "Removed existing doxygen user"; fi
+      if delgroup doxygen 2>/dev/null; then info "Removed existing doxygen group"; fi
       addgroup -g "$PGID" doxygen
       adduser -u "$PUID" -G doxygen -s /bin/sh -D -h /home/doxygen doxygen
     elif [ -f /etc/debian_version ]; then
