@@ -4,6 +4,7 @@ ARG DEBIAN_VERSION=stable-slim
 
 FROM alpine:${DISTRO_VERSION} AS alpine-base
 FROM debian:${DEBIAN_VERSION} AS debian-base
+# hadolint ignore=DL3006
 FROM ${DISTRO}-base
 
 # Re-declare ARG to make it available after FROM
@@ -15,6 +16,7 @@ LABEL org.opencontainers.image.description="Doxygen container for documentation 
 LABEL org.opencontainers.image.source="https://github.com/kingpin/doxygen-docker"
 
 # Install required packages (distro-specific) - including tools for the entrypoint
+# hadolint ignore=DL3008,DL3018
 RUN if [ -f /etc/alpine-release ]; then \
         apk --update --no-cache add \
         doxygen \
