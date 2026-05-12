@@ -182,6 +182,16 @@ jobs:
           echo "$TAGS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
       
+      # Generate SBOM from the test image before push
+      - name: Generate SBOM
+        if: github.ref == 'refs/heads/main'
+        uses: anchore/sbom-action@v0
+        with:
+          image: doxygen-test:${{ matrix.distro }}
+          artifact-name: sbom-${{ matrix.distro }}.spdx.json
+          output-file: sbom-${{ matrix.distro }}.spdx.json
+          format: spdx-json
+
       # Build and push the images
       - name: Build and push
         uses: docker/build-push-action@v7
