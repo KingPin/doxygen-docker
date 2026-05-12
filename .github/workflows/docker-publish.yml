@@ -192,7 +192,7 @@ jobs:
             DISTRO=${{ matrix.distro }}
             ${{ matrix.distro == 'alpine' && format('DISTRO_VERSION={0}', matrix.distro_version) || format('DEBIAN_VERSION={0}', matrix.debian_version) }}
           platforms: linux/amd64,linux/arm64,linux/arm/v7
-          push: ${{ github.ref == 'refs/heads/main' || github.event_name == 'pull_request' }}
+          push: ${{ github.ref == 'refs/heads/main' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
           tags: ${{ steps.prep.outputs.tags }}
           cache-from: |
             type=gha,scope=${{ matrix.distro }}
