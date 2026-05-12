@@ -140,11 +140,34 @@ This remaps the container's internal `doxygen` user to your host UID/GID, so out
 
 ### Common Permission Issues
 
-If you encounter permission errors, try:
+If you see errors like `Could not open file ... for writing` or `Permission denied`, the mounted output directory is not writable by the container's `doxygen` user (UID 1000 by default).
 
-1. Use PUID/PGID as shown above
-2. Ensure host directories exist with proper permissions before mounting
-3. For CI/CD environments, add an explicit chmod step
+**Option 1 — Change host directory ownership:**
+
+```bash
+chown 1000:1000 ./docs
+```
+
+Then run the container normally.
+
+**Option 2 — Remap the container user to your UID (recommended):**
+
+```bash
+docker run --rm \
+  -v $(pwd):/input \
+  -v $(pwd)/docs:/output \
+  -e PUID=$(id -u) \
+  -e PGID=$(id -g) \
+  ghcr.io/kingpin/doxygen-docker:latest
+```
+
+**Option 3 — Pre-create the output directory with open permissions:**
+
+```bash
+mkdir -p docs && chmod 777 docs
+```
+
+For CI/CD environments where you can't set PUID/PGID, use option 1 or 3 in a step before running the container.
 
 ## 🔄 Integration Examples
 
@@ -200,9 +223,13 @@ Check that:
 2. Output directory is properly mounted
 3. Source files are in the expected format
 
-### Permission Denied Errors
+### Permission Denied Errors / "Could not open file for writing"
 
-Use the PUID/PGID environment variables as described in the [Permission Handling](#-permission-handling) section.
+The container's `doxygen` user (UID 1000) cannot write to your mounted output directory. See [Common Permission Issues](#common-permission-issues) for the three ways to fix this — the quickest is:
+
+```bash
+chown 1000:1000 <your-output-directory>
+```
 
 ## 🛡️ Security
 

@@ -19,8 +19,14 @@ fix_permissions() {
     return
   fi
   if [ ! -w "$dir" ]; then
-    warn "Directory $dir is not writable, attempting to fix permissions"
-    chmod -R u+rw "$dir" || warn "chmod failed on $dir — doxygen may fail to write output"
+    warn "Directory $dir is not writable by the container user (UID $(id -u))"
+    chmod -R u+rw "$dir" 2>/dev/null || true
+    if [ ! -w "$dir" ]; then
+      warn "Could not make $dir writable. Fix on the host with one of:"
+      warn "  chown 1000:1000 <host-path>   (match the default container UID)"
+      warn "  -e PUID=\$(id -u) -e PGID=\$(id -g)   (remap the container user to your UID)"
+      warn "Doxygen will likely fail to write output files."
+    fi
   fi
 }
 
@@ -50,6 +56,13 @@ if [ "$(id -u)" = "0" ]; then
     chown -R doxygen:doxygen /home/doxygen
   fi
 
+  # Fix ownership of mounted volumes while still root — this is the only reliable way
+  # to ensure the unprivileged doxygen user can write to bind-mounted directories
+  # regardless of what UID owns them on the host.
+  for dir in /input /output; do
+    [ -d "$dir" ] && chown doxygen:doxygen "$dir"
+  done
+
   if command -v su-exec >/dev/null 2>&1; then
     exec su-exec doxygen "$0" "$@"
   elif command -v gosu >/dev/null 2>&1; then
@@ -61,7 +74,8 @@ if [ "$(id -u)" = "0" ]; then
   fi
 fi
 
-# Check critical directories for permissions issues
+# Post-drop safety check — only relevant when container is started non-root (e.g. --user flag),
+# in which case we can't chown above and can only warn.
 fix_permissions /input
 fix_permissions /output
 
